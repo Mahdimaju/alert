@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRITICAL ALERT // SYSTEM BREACH DETECTED</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@400;600;800&family=Permanent+Marker&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Fira Code', monospace;
+      background-color: #030712;
+      color: #f87171;
+      overflow-x: hidden;
+    }
+    
+    /* CRT Scanline & vignette effect */
+    .scanlines {
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.45) 50%
+      ), linear-gradient(
+        90deg,
+        rgba(255, 0, 0, 0.04),
+        rgba(0, 255, 0, 0.01),
+        rgba(0, 0, 255, 0.04)
+      );
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+
+    /* Screen flicker animation */
+    @keyframes screenFlicker {
+      0% { opacity: 0.98; }
+      50% { opacity: 1; }
+      75% { opacity: 0.94; }
+      100% { opacity: 0.99; }
+    }
+    .flicker {
+      animation: screenFlicker 0.15s infinite;
+    }
+
+    /* Red neon glow */
+    .neon-border {
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 15px rgba(239, 68, 68, 0.2);
+    }
+    .neon-text-red {
+      text-shadow: 0 0 8px rgba(239, 68, 68, 0.8), 0 0 20px rgba(220, 38, 38, 0.6);
+    }
+    .neon-text-cyan {
+      text-shadow: 0 0 8px rgba(6, 182, 212, 0.8), 0 0 18px rgba(8, 145, 178, 0.5);
+    }
+
+    /* Glitch text keyframes */
+    @keyframes glitch {
+      0% { transform: translate(0); }
+      20% { transform: translate(-2px, 2px); }
+      40% { transform: translate(-2px, -2px); }
+      60% { transform: translate(2px, 2px); }
+      80% { transform: translate(2px, -2px); }
+      100% { transform: translate(0); }
+    }
+    .glitch-anim {
+      display: inline-block;
+      animation: glitch 0.35s infinite;
+    }
+
+    /* Custom scrollbar for terminal */
+    #terminal-logs::-webkit-scrollbar {
+      width: 4px;
+    }
+    #terminal-logs::-webkit-scrollbar-thumb {
+      background: #ef4444;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen relative flex flex-col justify-between selection:bg-red-900 selection:text-white">
+
+  <!-- Scanlines overlay -->
+  <div class="fixed inset-0 scanlines z-30 pointer-events-none"></div>
+
+  <!-- Audio unlock banner for first-time clicks -->
+  <div id="audio-prompter" class="fixed top-2 left-1/2 -translate-x-1/2 z-40 bg-red-950/90 border border-red-500/50 text-red-200 text-xs px-4 py-1.5 rounded-full backdrop-blur transition-all duration-300 flex items-center gap-2">
+    <span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+    Klik di mana saja atau tombol Fullscreen untuk mengaktifkan audio alarm!
+  </div>
+
+  <main id="prank-screen" class="relative z-10 p-3 sm:p-6 max-w-6xl w-full mx-auto flex flex-col gap-4 flex-grow">
+    
+    <!-- Top System Header Bar -->
+    <header class="flex flex-wrap items-center justify-between gap-3 border border-red-600/40 bg-red-950/20 backdrop-blur-md p-3 rounded-lg neon-border">
+      <div class="flex items-center gap-3">
+        <div class="w-3.5 h-3.5 rounded-full bg-red-600 animate-ping"></div>
+        <div>
+          <span class="text-xs text-red-400 font-bold tracking-widest block uppercase">CRITICAL SYSTEM THREAT</span>
+          <span class="text-xs text-neutral-400">STATUS: <strong class="text-red-400">UNAUTHORIZED EXFILTRATION</strong></span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btn-fullscreen" class="px-3 py-1.5 text-xs bg-red-950 hover:bg-red-900 text-red-300 border border-red-600/60 rounded flex items-center gap-1.5 transition active:scale-95">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+          <span id="fs-text">Fullscreen</span>
+        </button>
+
+        <button id="btn-toggle-sound" class="px-3 py-1.5 text-xs bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-700 rounded transition active:scale-95">
+          🔊 Sound: <span id="sound-status" class="text-red-400">MUTED</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Emergency Countdown & Threat Banner -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Big Countdown Card -->
+      <div class="border border-red-600/60 bg-black/60 rounded-xl p-5 flex flex-col items-center justify-center text-center neon-border relative overflow-hidden">
+        <div class="absolute inset-0 bg-red-600/5 animate-pulse"></div>
+        <p class="text-xs text-red-400 font-bold uppercase tracking-widest mb-1">TOTAL DATA PURGE IN</p>
+        <div id="countdown" class="text-5xl sm:text-6xl font-black text-red-500 neon-text-red glitch-anim tracking-wider">
+          00:30
+        </div>
+        <p class="text-[10px] text-red-400/80 mt-2 font-mono">TARGET ID: <span id="victim-ip">182.1.88.241 (REMOTELY LINKED)</span></p>
+      </div>
+
+      <!-- Live Payload Status -->
+      <div class="md:col-span-2 border border-red-600/40 bg-black/60 rounded-xl p-5 flex flex-col justify-between neon-border">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-2">
+              <span class="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              DATA EXFILTRATION PROGRESS
+            </span>
+            <span id="progress-percent" class="text-lg font-bold text-red-400 font-mono">14%</span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="w-full bg-neutral-950 border border-red-800 rounded-full h-4 p-0.5 overflow-hidden">
+            <div id="progress-bar" class="h-full bg-gradient-to-r from-red-700 via-red-500 to-rose-400 rounded-full transition-all duration-300" style="width: 14%;"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 pt-3 border-t border-red-950 text-[11px]">
+          <div>
+            <span class="text-neutral-500 block">WhatsApp Media:</span>
+            <span class="text-red-400 font-semibold" id="stat-wa">Dumping (3.4 GB)...</span>
+          </div>
+          <div>
+            <span class="text-neutral-500 block">Saved Passwords:</span>
+            <span class="text-red-400 font-semibold" id="stat-pwd">Extracting Chrome...</span>
+          </div>
+          <div>
+            <span class="text-neutral-500 block">Camera Feed:</span>
+            <span class="text-red-400 font-semibold" id="stat-cam">Streaming (Port 8443)</span>
+          </div>
+          <div>
+            <span class="text-neutral-500 block">Cloud Sync:</span>
+            <span class="text-red-400 font-semibold" id="stat-cloud">Overwritten 44%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="border border-red-900/60 bg-black/80 rounded-xl p-4 flex flex-col flex-grow shadow-2xl relative">
+      <div class="flex items-center justify-between border-b border-red-950 pb-2 mb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-full bg-red-600"></div>
+          <div class="w-2.5 h-2.5 rounded-full bg-yellow-600"></div>
+          <div class="w-2.5 h-2.5 rounded-full bg-green-600"></div>
+          <span class="text-xs text-neutral-400 font-mono ml-2">root@darknet-c2-tunnel:~# ./exfiltrate_device_all.sh</span>
+        </div>
+        <span class="text-[10px] text-cyan-400 neon-text-cyan">AES-256 TUNNEL ACTIVE</span>
+      </div>
+
+      <!-- Scrollable Logs Container -->
+      <div id="terminal-logs" class="text-xs leading-relaxed font-mono flex flex-col gap-1 overflow-y-auto max-h-56 min-h-[160px] text-neutral-300 pr-1">
+        <div class="text-neutral-500">[00:00:01] Initializing rootkit payload injection...</div>
+        <div class="text-green-400">[00:00:02] BYPASSING LOCAL FIREWALL SUCCESSFUL</div>
+        <div class="text-yellow-400">[00:00:03] Device identity verified: User local profile acquired.</div>
+        <div class="text-red-400">[00:00:04] EXFILTRATION STREAM COMMENCED TO 103.22.45.19:9092</div>
+      </div>
+    </section>
+
+    <section class="flex flex-wrap items-center justify-between gap-3 pt-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Deceptive Buttons -->
+        <button id="btn-cancel" class="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-700/50 hover:shadow-red-600 transition active:scale-95 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+          CANCEL DATA WIPE
+        </button>
+
+        <button id="btn-abort" class="px-4 py-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-red-400 font-semibold text-xs border border-red-900 transition active:scale-95">
+          DISCONNECT NETWORK (SAFE MODE)
+        </button>
+      </div>
+
+      <!-- Quick Prank Reveal Toggle for user -->
+      <button id="btn-reveal-now" class="px-4 py-2.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-600/40 text-xs font-semibold transition active:scale-95 flex items-center gap-1.5 ml-auto">
+        <span>🤫 Selesaikan Prank (Saya Penonton)</span>
+      </button>
+    </section>
+  </main>
+
+  <section id="reveal-screen" class="hidden fixed inset-0 z-50 bg-neutral-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 text-center">
+    <div class="max-w-xl w-full bg-neutral-900/90 border border-emerald-500/40 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+      <!-- Fun glow circle -->
+      <div class="absolute -top-20 -left-20 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-20 -right-20 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="text-6xl sm:text-7xl mb-4 animate-bounce">😂🎉</div>
+      
+      <h1 class="text-3xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 mb-3 tracking-tight">
+        KAMU KENA PRANK!
+      </h1>
+      
+      <p class="text-neutral-300 text-sm sm:text-base leading-relaxed mb-6 font-sans">
+        Napas dulu bro/sis! Santai ya, <strong class="text-emerald-400">HP & komputermu 100% AMAN</strong>. Tidak ada hacker, tidak ada data yang dicuri, dan tidak ada file yang dihapus. Ini cuma simulasi web!
+      </p>
+
+      <div class="bg-neutral-950/80 border border-neutral-800 rounded-xl p-4 text-left font-mono text-xs text-neutral-400 mb-6 space-y-1">
+        <p class="text-emerald-400 font-semibold">✓ Status Keamanan:</p>
+        <p>• Data Foto & Galeri: AMAN</p>
+        <p>• WhatsApp & Chat: TIDAK TERSENTUH</p>
+        <p>• Detak Jantung Kamu: SEMPAT NAIK 200% 📈</p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 justify-center items-center font-sans">
+        <button id="btn-restart" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm transition transform active:scale-95 shadow-lg shadow-emerald-500/30">
+          Ulangi Prank ke Teman Lain 🔄
+        </button>
+        <button id="btn-copy-link" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-semibold text-sm border border-neutral-700 transition active:scale-95">
+          Salin Tautan Prank 📋
+        </button>
+      </div>
+
+      <div id="copy-toast" class="hidden text-xs text-emerald-400 mt-3 font-mono">
+        ✓ Tautan berhasil disalin ke clipboard!
+      </div>
+    </div>
+  </section>
+
+  <div id="fake-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-red-950 border-2 border-red-500 text-red-100 rounded-2xl max-w-sm w-full p-6 text-center neon-border transform scale-95 transition-all">
+      <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-red-600/30 border border-red-500 flex items-center justify-center text-red-400 text-2xl font-bold">
+        ✕
+      </div>
+      <h3 class="text-lg font-bold text-red-400 mb-1 tracking-wider uppercase">ACCESS DENIED</h3>
+      <p id="modal-desc" class="text-xs text-neutral-300 font-mono mb-5">
+        SECURITY OVERRIDE FAILED. ADMINISTRATIVE LOCKOUT HAS COMMENCED. TIMER SPEED MULTIPLIED.
+      </p>
+      <button id="btn-close-modal" class="w-full py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase rounded-lg transition active:scale-95">
+        DISMISS (TOO LATE)
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Audio synthesizer using Web Audio API for dramatic alarm sounds
+    let audioCtx = null;
+    let isSoundMuted = true;
+    let alarmInterval = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          audioCtx = new AudioContext();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playBeep(freq = 880, duration = 0.12, type = "sawtooth") {
+      if (isSoundMuted || !audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        console.error("Audio error", e);
+      }
+    }
+
+    function startAlarmLoop(speed = 600) {
+      if (alarmInterval) clearInterval(alarmInterval);
+      alarmInterval = setInterval(() => {
+        playBeep(980, 0.1, "sawtooth");
+        setTimeout(() => playBeep(740, 0.1, "triangle"), 120);
+      }, speed);
+    }
+
+    function stopAlarmLoop() {
+      if (alarmInterval) {
+        clearInterval(alarmInterval);
+        alarmInterval = null;
+      }
+    }
+
+    let timeLeft = 30;
+    let progress = 14;
+    let timerSpeed = 1000;
+    let mainTimer = null;
+    let isPrankRevealed = false;
+
+    const terminalLogsEl = document.getElementById("terminal-logs");
+    const countdownEl = document.getElementById("countdown");
+    const progressBar = document.getElementById("progress-bar");
+    const progressPercent = document.getElementById("progress-percent");
+
+    const fakeLogTemplates = [
+      "Accessing internal storage: /DCIM/Camera/...",
+      "Found 4,219 JPEG files. Compressing archive...",
+      "Dumping Chrome credentials from AppData/Default...",
+      "Token extracted: Discord/Telegram session active.",
+      "Uploading payload part {part}/12 to remote IP: 185.220.101.4",
+      "Intercepting two-factor SMS gateway...",
+      "Cloning WhatsApp messages database (msgstore.db.crypt14)...",
+      "Injecting persistent firmware driver patch...",
+      "Encrypting local document partitions (RSA-4096)...",
+      "Transfer speed: 94.2 MB/s through encrypted tunnel."
+    ];
+
+    let logCounter = 1;
+
+    function addTerminalLog(customText = null, color = "text-neutral-400") {
+      const logDiv = document.createElement("div");
+      logDiv.className = color;
+      
+      const now = new Date();
+      const timeStr = `[${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}]`;
+      
+      let text = customText;
+      if (!text) {
+        const randTemplate = fakeLogTemplates[Math.floor(Math.random() * fakeLogTemplates.length)];
+        text = randTemplate.replace("{part}", Math.floor(Math.random() * 12) + 1);
+      }
+
+      logDiv.textContent = `${timeStr} ${text}`;
+      terminalLogsEl.appendChild(logDiv);
+      terminalLogsEl.scrollTop = terminalLogsEl.scrollHeight;
+
+      // Keep maximum 40 log lines
+      if (terminalLogsEl.children.length > 40) {
+        terminalLogsEl.removeChild(terminalLogsEl.firstChild);
+      }
+    }
+
+    function runTimer() {
+      if (mainTimer) clearInterval(mainTimer);
+      mainTimer = setInterval(() => {
+        if (timeLeft > 0) {
+          timeLeft--;
+          const mins = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+          const secs = String(timeLeft % 60).padStart(2, '0');
+          countdownEl.textContent = `${mins}:${secs}`;
+
+          // Progress calculation towards 99%
+          const targetProgress = Math.min(99, Math.round(14 + ((30 - timeLeft) / 30) * 85));
+          if (targetProgress > progress) {
+            progress = targetProgress;
+            progressBar.style.width = `${progress}%`;
+            progressPercent.textContent = `${progress}%`;
+          }
+
+          // Random terminal logs per tick
+          addTerminalLog();
+          if (Math.random() > 0.6) {
+            addTerminalLog(null, "text-red-400");
+          }
+
+          // Sub-stats dynamic display
+          if (timeLeft <= 20) document.getElementById("stat-wa").textContent = "Uploaded (78%)";
+          if (timeLeft <= 15) document.getElementById("stat-pwd").textContent = "Decrypted (89 entries)";
+          if (timeLeft <= 8) document.getElementById("stat-cloud").textContent = "Purged (87%)";
+
+          if (timeLeft <= 0) {
+            triggerPrankReveal();
+          }
+        }
+      }, timerSpeed);
+    }
+
+    const fakeModal = document.getElementById("fake-modal");
+    const btnCancel = document.getElementById("btn-cancel");
+    const btnAbort = document.getElementById("btn-abort");
+    const btnCloseModal = document.getElementById("btn-close-modal");
+    const modalDesc = document.getElementById("modal-desc");
+
+    function triggerFakeError(message) {
+      playBeep(440, 0.3, "sawtooth");
+      setTimeout(() => playBeep(220, 0.4, "square"), 100);
+      modalDesc.textContent = message;
+      fakeModal.classList.remove("hidden");
+
+      // Spices up the panic: accelerates countdown
+      if (timerSpeed > 400) {
+        timerSpeed = Math.max(350, timerSpeed - 250);
+        runTimer();
+        startAlarmLoop(350);
+      }
+    }
+
+    btnCancel.addEventListener("click", () => {
+      triggerFakeError("ERROR 0x889F: PERMINTAAN DITOLAK! Tombol pembatalan memicu pengalihan paksa. Kecepatan transfer digandakan 2x lipat!");
+    });
+
+    btnAbort.addEventListener("click", () => {
+      triggerFakeError("NETWORK ISOLATION FAILED: Adapter wireless terkunci secara remote. Bypass gagal!");
+    });
+
+    btnCloseModal.addEventListener("click", () => {
+      fakeModal.classList.add("hidden");
+    });
+
+    const prankScreen = document.getElementById("prank-screen");
+    const revealScreen = document.getElementById("reveal-screen");
+    const btnRevealNow = document.getElementById("btn-reveal-now");
+    const btnRestart = document.getElementById("btn-restart");
+
+    function triggerPrankReveal() {
+      if (isPrankRevealed) return;
+      isPrankRevealed = true;
+
+      // Stop timers and alarms
+      if (mainTimer) clearInterval(mainTimer);
+      stopAlarmLoop();
+
+      // Close fake modal if open
+      fakeModal.classList.add("hidden");
+
+      // Hide horror screen, show friendly reveal
+      prankScreen.classList.add("hidden");
+      revealScreen.classList.remove("hidden");
+
+      // Fun victory sound
+      if (!isSoundMuted && audioCtx) {
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+          setTimeout(() => playBeep(freq, 0.18, "sine"), i * 140);
+        });
+      }
+
+      // Shoot Confetti
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+        setTimeout(() => {
+          confetti({
+            particleCount: 80,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 }
+          });
+          confetti({
+            particleCount: 80,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 }
+          });
+        }, 300);
+      }
+    }
+
+    btnRevealNow.addEventListener("click", triggerPrankReveal);
+
+    btnRestart.addEventListener("click", () => {
+      window.location.reload();
+    });
+
+    // Copy link helper
+    document.getElementById("btn-copy-link").addEventListener("click", () => {
+      const url = window.location.href;
+      const dummyInput = document.createElement("input");
+      document.body.appendChild(dummyInput);
+      dummyInput.value = url;
+      dummyInput.select();
+      document.execCommand("copy");
+      document.body.removeChild(dummyInput);
+
+      const toast = document.getElementById("copy-toast");
+      toast.classList.remove("hidden");
+      setTimeout(() => toast.classList.add("hidden"), 3000);
+    });
+
+    const btnSound = document.getElementById("btn-toggle-sound");
+    const soundStatus = document.getElementById("sound-status");
+    const audioPrompter = document.getElementById("audio-prompter");
+
+    function enableSound() {
+      initAudio();
+      isSoundMuted = false;
+      soundStatus.textContent = "ALARM ON";
+      soundStatus.className = "text-emerald-400 font-bold";
+      audioPrompter.classList.add("hidden");
+      startAlarmLoop(550);
+    }
+
+    function toggleSound() {
+      if (isSoundMuted) {
+        enableSound();
+      } else {
+        isSoundMuted = true;
+        soundStatus.textContent = "MUTED";
+        soundStatus.className = "text-red-400";
+        stopAlarmLoop();
+      }
+    }
+
+    btnSound.addEventListener("click", toggleSound);
+
+    // Audio unlock on first click anywhere on body
+    document.body.addEventListener("click", function firstClickUnlock() {
+      initAudio();
+      if (isSoundMuted) {
+        enableSound();
+      }
+      document.body.removeEventListener("click", firstClickUnlock);
+    }, { once: true });
+
+    // Fullscreen Toggle
+    const btnFullscreen = document.getElementById("btn-fullscreen");
+    const fsText = document.getElementById("fs-text");
+
+    btnFullscreen.addEventListener("click", () => {
+      enableSound();
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          fsText.textContent = "Exit Fullscreen";
+        }).catch(err => {
+          console.warn("Fullscreen request error", err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+          fsText.textContent = "Fullscreen";
+        }
+      }
+    });
+
+    // Start prank loop on page load
+    window.addEventListener("DOMContentLoaded", () => {
+      runTimer();
+      // Periodic terminal lines
+      setInterval(() => {
+        if (!isPrankRevealed) {
+          addTerminalLog();
+        }
+      }, 700);
+    });
+  </script>
+</body>
+</html>
